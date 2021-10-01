@@ -1,13 +1,13 @@
 import math
 import random
 import katagames_sdk.engine as kataen
-from BaseGame import BaseGame
-from Vector2 import Vector2
 
 
-pygame = kataen.import_pygame()
+BaseGame = kataen.BaseGame
+pygame = kataen.pygame
 EventReceiver = kataen.EventReceiver
 EngineEvTypes = kataen.EngineEvTypes
+Vector2 = pygame.Vector2
 
 
 ############## art.py ##############
@@ -231,7 +231,8 @@ class GameState:
             i += 1
 
     def has_line_of_sight(self, start_xy, end_xy):
-        ray = (end_xy - start_xy).scale_to_length(1)
+        ray = (end_xy - start_xy)
+        ray.scale_to_length(1)
         dist = start_xy.distance_to(end_xy)
         return self.cast_ray(-1, start_xy, ray, dist).end is None
 
@@ -245,29 +246,44 @@ class GameState:
             rays.sort(key=lambda r: 1000 if r.end is None else r.dist())
             if rays[0].end is not None:
                 new_pos = rays[0].end
-                pushout_dir = rays[0].ray.scale_to_length(buffer_zone / 2)
+                pushout_dir = rays[0].ray
+                pushout_dir.scale_to_length(buffer_zone / 2)
                 res_xy = new_pos + pushout_dir
             else:
                 return xy  # failed
 
         if buffer_zone > 0:
             ortho_dists = self.ortho_distances_to_walls(res_xy, max_dist=buffer_zone)
-            for d in ortho_dists:
-                if ortho_dists[d] <= buffer_zone:
-                    res_xy += -d * (buffer_zone - ortho_dists[d])  # push it out, away from the wall
+            for adir in ortho_dists.keys():
+                if ortho_dists[adir] <= buffer_zone:
+                    vvv = GameState.dir_to_vect[adir]
+                    res_xy += (-1*vvv) * (buffer_zone-ortho_dists[adir])  # push it out, away from the wall
 
         return res_xy
 
+    dirs = [
+        (0,1),
+        (-1,0),
+        (1,0),
+        (0,-1)
+    ]
+    dir_to_vect = {
+        (0,1):Vector2(0, 1),
+        (-1,0):Vector2(-1, 0),
+        (1,0):Vector2(1, 0),
+        (0,-1):Vector2(0, -1),
+    }
     def ortho_distances_to_walls(self, xy, max_dist=100):
-        dirs = {
-            Vector2(0, 1): float('inf'),
-            Vector2(-1, 0): float('inf'),
-            Vector2(1, 0): float('inf'),
-            Vector2(0, -1): float('inf')
-        }
-        for v in dirs:
-            dirs[v] = self.cast_ray(-1, xy, v, max_dist).dist()
-        return dirs
+        """
+            dict in the form {
+              (0,1): 8.789789,
+              ...
+            }
+        """
+        assoc_dir_dist = dict()
+        for a_dir in GameState.dirs:
+            assoc_dir_dist[a_dir] = self.cast_ray(-1, xy, GameState.dir_to_vect[a_dir], max_dist).dist()
+        return assoc_dir_dist
 
     def cast_ray(self, idx, start_xy, ray, max_dist, antiray=False, ignore_cells=None) -> RayState:
         # yoinked from https://theshoemaker.de/2016/02/ray-casting-in-2d-grids/
@@ -681,7 +697,8 @@ class Enemy(Entity):
             self.is_aggro = False
 
         if self.is_aggro:
-            self.vel = (player_xy - self.xy).scale_to_length(1)
+            self.vel = player_xy - self.xy
+            self.vel.scale_to_length(1)
         else:
             # just turn randomly
             self.vel = self.vel.rotate(2 * (random.random() - 0.5) * self.turn_speed * dt)

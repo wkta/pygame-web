@@ -1,0 +1,11 @@
+
+To run the demo...
+
+First, go fetch a very old version of the game engine, here:
+
+https://github.com/pyved-solution/pyved-engine/releases/tag/v0.0.6-alpha
+
+the missing file:
+https://gist.github.com/wkta/ee1f80231258bf73e97167a22ab986b9
+
+You'll need to copy-paste the BaseGame class into your engine.py to patch it manually
